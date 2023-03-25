@@ -1,0 +1,185 @@
+﻿@page "/register"
+@using ComputerBuilder.DataModels.CustomModels;
+@using ComputerBuilder.Web.Services
+@inject IUserPanelService userPanelService
+@inject ProtectedSessionStorage sessionStorage;
+@inject NavigationManager navManager
+
+<style>
+    .loginBox{
+        font-family: 'Open Sans' sans-serif;
+        margin: 0  auto 0 auto;
+        width:100%;
+        text-align: center;
+        margin: 20px 0px 20px 0px    ;
+    }
+
+    p{
+        font-size: 12px;
+        text-decoration: none;
+        color: #ffffff;
+    }
+
+    h1{
+        font-size: 1.5em;
+        color:#fe9900;
+    }
+
+    body {
+        background: linear-gradient(90deg, #000000,#756213,#FFBD33 );
+    }
+    .box{
+        padding: 5px 20px;
+        border: 2px solid rgba(0,0,0,0.4);
+        text-shadow: 0 -1px 0 rgba(0,0,0,0.4);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 10px 10px rgba(255,255,255,0.1);
+        border-radius: 0.3em;
+        background: black;
+        width: 400px;
+        margin: 0 auto 0 auto;
+        padding: 0px 0px 70px 0px;
+    
+    }
+
+    .email{
+        background: #111;
+        border-bottom: #ccc 2px solid;
+        padding: 8px;
+        width: 350px;
+        color: #fe9900;
+        margin-top: 10px;
+        font-size: 1em;
+        border-radius: 4px;
+    }
+
+    .password{
+        border-radius:4px;
+        background: #111;
+        padding: 8px;
+        width: 250px;
+        color: #fe9900;
+        font-size: 1em;
+    }
+
+    .btn{
+        background: #fe9900;
+        width:180px;
+        padding-top: 5px;
+        padding-bottom:5px;
+        color: white;
+        border-radius: 4px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        float: left;
+        margin-left: 10px;
+        font-weight: 800;
+        font-size: 0.8em;
+    }
+
+        .btn:hover{
+           
+             color:black
+        }
+
+    #btn2{
+        float:left;
+        background: #fe9900;
+        width: 180px;
+        padding-top: 5px;
+        padding-bottom:5px;
+        color:white;
+        border-radius: 4px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        margin-left: 10px;
+        font-weight: 800;
+        font-size: 0.8em;
+    }
+
+        #btn2:hover{
+            background:#fe9900;
+            color:black;
+        }
+
+</style>
+
+    <div style="min-height: 400px;">
+
+        <div class="loginBox">
+            <div class="box">
+            <h1>Register</h1>
+            <EditForm Model="@registerModel" OnValidSubmit="Register_Click">
+                <DataAnnotationsValidator/>
+                <InputText type="text" name="email" placeholder="Name" class="email" @bind-Value="registerModel.Name" autocomplete="off"/>
+                <ValidationMessage For="@(() => registerModel.Name)"/>
+
+                <InputText type="email" name="email" placeholder="email" class="email" @bind-Value="registerModel.EmailId" autocomplete="off" />
+                <ValidationMessage For="@(() => registerModel.EmailId)" />
+
+                <InputText type="text" name="mobileno" placeholder="MobileNo." class="email" @bind-Value="registerModel.MobileNo" autocomplete="off" />
+                <ValidationMessage For="@(() => registerModel.MobileNo)" />
+
+                <InputText type="password" name="email" placeholder="Password" class="email" @bind-Value="registerModel.Password" autocomplete="off" />
+                <ValidationMessage For="@(() => registerModel.Password)" />
+
+                    <input type="submit" class="btn" value="Register"/>
+                    <a href="login"><div id="btn2">Login</div></a>
+            </EditForm>
+            </div>
+            <div>
+                <br/>
+                <br/>
+                <p style = "color:#e52e50">
+                    <h4>@alertMessage</h4>
+                </p>
+            </div>
+        </div>
+    </div>
+@code {
+    [CascadingParameter]
+    public EventCallback notify { get; set; }
+
+    public RegisterModel registerModel { get; set; }
+    public string alertMessage { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        registerModel = new RegisterModel(); 
+        return base.OnInitializedAsync();
+    }
+
+    private async Task Register_Click()
+    {
+        var response = await userPanelService.RegisterUser(registerModel);
+        if (response.Status)
+        {
+            var user_response = response.Message.Split("|");
+            await sessionStorage.SetAsync("userKey", user_response[0]);
+            await sessionStorage.SetAsync("userName", user_response[1]);
+            await sessionStorage.SetAsync("userEmail", user_response[2]);
+            await notify.InvokeAsync();
+            navManager.NavigateTo("/");
+        }
+        else
+        {
+            alertMessage = response.Message;
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var login_session = await userPanelService.IsUserLoggedIn();
+            if (login_session)
+            {
+                navManager.NavigateTo("/");
+            }
+            var checkout_session = await sessionStorage.GetAsync<string>("checkoutAlert");
+            if (checkout_session.Success)
+            {
+                this.alertMessage = checkout_session.Value;
+                StateHasChanged();
+            }
+        }
+    }
+}
